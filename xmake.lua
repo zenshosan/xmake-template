@@ -3,11 +3,14 @@ set_project("mylib")
 set_version("0.0.1", {build = "%Y%m%d%H%M"})
 set_xmakever("3.0.1")
 
--- ビルド対象のプラットフォームとアーキテクチャを指定
-set_allowedplats("windows", "mingw")
-set_allowedarchs("x64")
+-- Specify the target platforms and architectures
+set_allowedplats("windows", "linux")
+set_allowedarchs(-- for windows
+                 "x64",
+                 -- for linux
+                 "x86_64")
 
--- 使用するC++のバージョンを指定
+-- C++ version
 set_languages("c++latest")
 
 
@@ -19,7 +22,14 @@ elseif is_plat("linux") then
     add_rules("mode.debug", "mode.releasedbg", "mode.release", "mode.coverage")
 end
 
--- VSプロジェクトにxmake.luaの更新を検知させる
+if is_mode("coverage") then
+    -- .gcno files are not cached, so they will not be generated on rebuild.
+    -- disable caching as a workaround.
+    -- see https://github.com/xmake-io/xmake/issues/6664
+    set_policy("build.ccache", false)
+end
+
+-- let VS project detect updates of xmake.lua
 add_rules("plugin.vsxmake.autoupdate")
 
 target("libmylib")
@@ -44,6 +54,15 @@ target("libmylib")
        if is_mode("debug") then
            add_cxflags("/sdl", "/RTC1")
        end
+    elseif is_plat("linux") then
+        add_defines("_LINUX")
+        add_cxflags("-Wall", "-Wextra", "-Wpedantic")
+
+        if is_mode("coverage") then
+            -- see https://gcovr.com/en/stable/guide/gcov_parser.html#negative-hit-counts
+            add_cxflags("-fprofile-update=atomic")
+            add_cxflags("-fprofile-abs-path")
+        end
     end
 target_end()
 
@@ -66,4 +85,54 @@ target("unit_test")
            add_cxflags("/sdl", "/RTC1")
        end
     end
+target_end()
+
+
+-- coverage task
+target("cov")
+    set_kind("phony")
+    on_run(function ()
+        if not is_mode("coverage") then
+            print("This target is only valid in coverage mode.")
+            return
+        end
+        -- generate coverage report using gcovr
+        import("lib.detect.find_tool")
+        local gcovr = find_tool("gcovr")
+        if not gcovr then
+            print("gcovr not found")
+            return
+        end
+
+        -- build test target first
+        os.exec("xmake build unit_test")
+
+        -- run tests to generate .gcda files
+        os.exec("xmake run unit_test")
+
+        -- make output directory
+        os.mkdir("coverage")
+
+        -- args for gcovr
+        local args = {
+            "--root", ".",
+            "--html", "--html-details",
+            "--output", "coverage/index.html",
+            "--exclude", "tests/.*",
+            "--exclude", ".*test.*",
+            "--object-directory", "build"
+        }
+
+        -- check if gcovr is executable
+        if not os.isexec(gcovr.program) then
+            print("gcovr is NOT executable")
+            print("gcovr.program path:", gcovr.program)
+            print("File exists:", os.isfile(gcovr.program))
+            return
+        end
+
+        -- gcovr with try option
+        os.execv(gcovr.program, args, {try = true})
+        print("Coverage report generated: coverage/index.html")
+    end)
 target_end()
