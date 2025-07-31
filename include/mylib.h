@@ -1,8 +1,10 @@
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-const char* get_version(void);
+    const char *get_version(void);
+    int myadd(int x, int y);
 
 #ifdef __cplusplus
 }
