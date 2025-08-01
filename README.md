@@ -21,24 +21,25 @@ A comprehensive template project for C++ library development using xmake.
 
 ```bash
 # Build the project
-xmake
+xmake f -m releasedbg
+xmake -v
 
 # Run tests
 xmake run unit_test
 
 # Coverage measurement (Linux)
-xmake -m coverage
+xmake f -m coverage
 xmake run cov
 
 # Sanitizer examples (Linux)
-xmake -m asan
+xmake f -m asan
 xmake run ovr_stack  # Stack buffer overflow detection example
 ```
 
 ## Project Structure
 
 ```
-├── include/          # Header files
+├── include/         # Header files
 ├── src/             # Source files
 ├── tests/           # Test code
 ├── examples/        # Sanitizer demonstration samples
