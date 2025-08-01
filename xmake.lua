@@ -60,8 +60,7 @@ rule("mode.debug")
             target:add("cuflags", "-G")
 
             if is_plat("windows") then
-                add_cxflags("/sdl", "/RTC1")
-                set_runtimes("MTd")
+                target:add("cxflags", "/sdl", "/RTC1")
             end
         end
     end)
@@ -85,10 +84,6 @@ rule("mode.release")
             end
             target:add("cxflags", "-DNDEBUG")
             target:add("cuflags", "-DNDEBUG")
-
-            if is_plat("windows") then
-                set_runtimes("MT")
-            end
         end
     end)
 
@@ -114,10 +109,6 @@ rule("mode.releasedbg")
             target:add("cxflags", "-DNDEBUG")
             target:add("cuflags", "-DNDEBUG")
             target:add("cuflags", "-lineinfo")
-
-            if is_plat("windows") then
-                set_runtimes("MT")
-            end
         end
     end)
 
@@ -311,13 +302,14 @@ target("cov")
         os.exec("xmake run unit_test")
 
         -- make output directory
-        os.mkdir("coverage")
+        os.mkdir("coverage-report")
 
         -- args for gcovr
         local args = {
             "--root", ".",
             "--html", "--html-details",
-            "--output", "coverage/index.html",
+            "--output", "coverage-report/index.html",
+            "--exclude", "examples/.*",
             "--exclude", "tests/.*",
             "--exclude", ".*test.*",
             "--object-directory", "build"
@@ -333,7 +325,7 @@ target("cov")
 
         -- gcovr with try option
         os.execv(gcovr.program, args, {try = true})
-        print("Coverage report generated: coverage/index.html")
+        print("Coverage report generated: coverage-report/index.html")
     end)
 target_end()
 

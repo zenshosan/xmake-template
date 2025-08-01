@@ -1,0 +1,107 @@
+
+name: C++ CI with xmake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # -----------------------------------------------------------
+  # 1. Normal build & unit test (Windows & Linux)
+  # -----------------------------------------------------------
+  build_and_test:
+    name: Build & Test (${{ matrix.os }}, ${{ matrix.mode }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        mode: [debug, release]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          build-cache: true
+
+      - name: Configure project
+        run: xmake config -y --mode=${{ matrix.mode }}
+
+      - name: Build project
+        run: xmake build -v
+
+      - name: Run tests
+        run: xmake test
+
+  # -----------------------------------------------------------
+  # 2. Coverage Measurement (Linux)
+  # -----------------------------------------------------------
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    needs: build_and_test # build_and_testジョブの完了を待つ
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          build-cache: true
+
+      - name: Install gcovr
+        run: pip install gcovr
+
+      - name: Configure for coverage
+        run: xmake config -y --mode=coverage
+
+      - name: Build for coverage
+        run: xmake build -v
+
+      - name: Run tests and generate coverage report
+        run: xmake run cov
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./coverage-report
+
+  # -----------------------------------------------------------
+  # 3. Sanitizer (Linux)
+  # -----------------------------------------------------------
+  sanitizers:
+    name: Sanitizer Checks
+    runs-on: ubuntu-latest
+    needs: build_and_test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          build-cache: true
+
+      - name: Configure with Sanitizers
+        # Enable AddressSanitizer
+        run: xmake config -y --mode=asan
+
+      - name: Build with Sanitizers
+        run: xmake build -v
+
+      - name: Run tests with Sanitizers
+        # Sanitizerが問題を検出すると、テストがエラーで終了する
+        run: xmake test
