@@ -9,6 +9,7 @@ A comprehensive template project for C++ library development using xmake.
 - Google Test integration, coverage measurement, Valgrind support
 - Automatic Git information and version generation
 - Sample code for various sanitizer demonstrations
+- GitHub Actions CI/CD pipeline
 
 ## Requirements
 
