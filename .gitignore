@@ -5,7 +5,7 @@
 .xmake/
 build/
 vsxmake*/
-coverage/
+coverage-report/
 
 # MacOS Cache
 .DS_Store
